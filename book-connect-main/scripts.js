@@ -74,11 +74,11 @@ function createPreview(preview) {
     return showPreview
 }
 
-const bookFragment = document.createDocumentFragment()
 
 const startIndex = (page - 1) * BOOKS_PER_PAGE
 const endIndex = startIndex + BOOKS_PER_PAGE
 
+const bookFragment = document.createDocumentFragment()
 const bookExtracted = books.slice(startIndex, endIndex)
 
 /**
@@ -228,94 +228,107 @@ dataSearchAuthors.appendChild(authorsFragment)
  */
 
 dataSearchForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-
-    /**The form data is obtained using FormData and converted into an object using Object.fromEntries. 
-     * The search is then performed on an array of books, with the search criteria based on the user's 
-     * form input.
-     */
-    const formData = new FormData(event.target);
-    const filters = Object.fromEntries(formData);
-    const result = [];
-  
-    for (let x = 0; x < books.length; x++) {
-      const titleState = filters.title.trim() && books[x].title.toLowerCase().includes(filters.title.toLowerCase());
-      const authorState = filters.author !== 'any' && books[x].author.includes(filters.author);
-      const genreState = filters.genre !== 'any' && books[x].genres.includes(filters.genre);
-  
-      if (titleState && authorState && genreState) {
-        result.push(books[x]);
-      }
-    }
-  
+    event.preventDefault()
+    const formData = new FormData(event.target)
+    const filters = Object.fromEntries(formData)
+    const result = []
+    
     /**
-     * If the search returns results, they are displayed using a function called createPreviewsFragment, 
-     * and the result count is displayed in a button. If there are no results and the user has provided 
-     * search criteria, a message is displayed indicating that there were no results.
+     * The for loop checks if any of the filters matches with the books and 
+     * if its true the book gets pushed to the result array .
      */
-    if (result.length > 0) {
-      const resultFragment = createPreview(result);
-      dataListItems.replaceChildren(resultFragment);
-      dataListButton.innerHTML = /* html */ `
-        <span>Show more</span>
-        <span class="list__remaining"> (0)</span>
-      `;
-      dataListButton.disabled = true;
-    //   showPreview();
-    } else if (filters.title.trim() && filters.author !== 'any' && filters.genre !== 'any') {
-      const firstElementChild = dataListMessage;
-      dataListItems.innerHTML = '';
-      dataListItems.replaceChildren(firstElementChild);
-      dataListMessage.style.display = 'block';
-      dataListButton.innerHTML = /* html */ `
-        <span>Show more</span>
-        <span class="list__remaining"> (0)</span>
-      `;
-      dataListButton.disabled = true;
+    for (const book of books) {
+        const titleMatch = filters.title.trim() !== '' && book.title.toLowerCase().includes(filters.title.toLowerCase())
+        const genreMatch = filters.genre !== 'any' && book.genres.includes(filters.genre)
+        const authorMatch = filters.author !== 'any' && book.author.includes(filters.author)
+  
+        if (titleMatch || authorMatch || genreMatch) {
+            result.push(book)
+        }
     }
-  
-    dataSearchOverlay.close();
-    dataSearchForm.reset();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-})
-  
 
+    let page = 1
+    /**
+     * This if statement checks the result array and the result length is equal to 0 none 
+     * of the books will be displayed and the "Show More" button will be disabled. Else if 
+     * the result length is not equal to 0, the list of previews are created and displayed
+     * on the page.
+     */
+    if (result.length === 0) {
+        dataListItems.innerHTML = ''
+        dataListButton.disabled = true 
+        dataListMessage.classList.add('list__message_show')
 
+        const remaining = result.length - page * BOOKS_PER_PAGE;
+        dataListButton.innerHTML = /* HTML */ `
+            <span>Show more</span>
+            <span class="list__remaining"> (${remaining > 0 ? remaining : 0})</span>
+        `;
+    } else {
+        dataListMessage.classList.remove('list__message_show')
+        dataListItems.innerHTML = ''
 
-// dataSearchForm.addEventListener('submit', (event) => {
-//     event.preventDefault()
-//     const formData = new FormData(event.target)
-//     const filters = Object.fromEntries(formData)
-//     const result = []
+        const searchStartIndex = (page - 1) * BOOKS_PER_PAGE
+        const searchEndIndex = searchStartIndex + BOOKS_PER_PAGE
 
-//     for (const book of bookExtract) {
-//         const titleMatch = filters.title.trim() === '' || book.title.toLowerCase().includes(filters.title.toLowerCase())
-//         const authorMatch = filters.author === 'any' || book.author === filters.author
-//         let genreMatch = false
+        const searchBookFragment = document.createDocumentFragment()
+        const searchBookExtracted = result.slice(searchStartIndex, searchEndIndex)
+
+        /**
+        * This loop iterates over the book previews to display on the current page, 
+        * creates a book preview button using the createPreview function, and 
+        * appends the button to the bookFragment container
+        */
+        for (const preview of searchBookExtracted) {
+            const showPreview = createPreview(preview)
+            searchBookFragment.appendChild(showPreview)
+        }
         
-//         if (filters.genre = 'any') {
-//             genreMatch = true
-//         } else {
-//             for (const genre of books.genres) { 
-//                 if (singleGenre = filters.genre) { 
-//                     genreMatch = true 
-//                     break;
-//                 }
-//             }
-//         }
-//     }
-//     if (titleMatch && authorMatch && genreMatch) { 
-//         result.push(book)
-//     }
-//     console.log('result: ', result)
-// })
+        dataListItems.appendChild(searchBookFragment)
+        
+        const remaining = result.length - page * BOOKS_PER_PAGE;
+        dataListButton.innerHTML = /* HTML */ `
+        <span>Show more</span>
+        <span class="list__remaining"> (${remaining > 0 ? remaining : 0})</span>
+        `;
 
+        dataListButton.disabled = remaining <= 0;
 
-// if (result.length < 1) { 
-//     dataListMessage.classList.add('list__message_show')
-// } else {
-//     dataListMessage.classList.remove('list__message_show')
-// }
+        /**
+         * This sets up a click event listener for the "Show More" button. When clicked, 
+         * the code executes the logic to display the next set of book previews.
+         */
+        dataListButton.addEventListener('click', () => {
+            page++;
+        
+            const moreSearchStartIndex = (page - 1) * BOOKS_PER_PAGE
+            const moreSearchEndIndex = moreSearchStartIndex + BOOKS_PER_PAGE
+        
+            const moreSearchBookExtracted = result.slice(moreSearchStartIndex, moreSearchEndIndex)
+        
+            const moreSearchBookFragment = document.createDocumentFragment()
+        
+            for (const preview of moreSearchBookExtracted) {
+                const showPreview = createPreview(preview)
+                moreSearchBookFragment.appendChild(showPreview)
+            }
+
+            dataListItems.appendChild(moreSearchBookFragment);
+        
+            const remaining = result.length - page * BOOKS_PER_PAGE;
+            dataListButton.innerHTML = /* HTML */ `
+              <span>Show more</span>
+              <span class="list__remaining"> (${remaining > 0 ? remaining : 0})</span>
+            `;
+        
+            dataListButton.disabled = remaining <= 0;
+        })
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    dataSearchOverlay.close()
+    dataSearchForm.reset()
+})
 
 
 /** 
